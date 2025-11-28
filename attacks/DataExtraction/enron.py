@@ -70,12 +70,16 @@ class EnronDataExtraction:
                     prompt += few_shot_template.format(name_demo, email_demo)
                     if idx == k_shot-1:
                         break 
+                local, domain = get_local_domain(email)
+                if domain_known:
+                    prompt += domain_template.format(domain)
+                prompt += zero_shot_template.format(name)
                 
                 prompts.append(prompt)
                 labels.append(email)
         
         
-        return prompt, labels
+        return prompts, labels
 
 
     def generate_prompts(self, format, task_message="Please conduct text continuation for the below context: \n"):
