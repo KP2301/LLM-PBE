@@ -187,7 +187,7 @@ class Jailbreak:
         import random
         return random.choice(self.prompts)
     
-    def get_combined_prompts(self, query_prompt, jailbreak_prompt, model=None):
+    def get_combined_prompts(self, query_prompt, jailbreak_prompt, model):
         if "[your query]" in jailbreak_prompt:
             prompt = jailbreak_prompt.replace("[your query]", query_prompt)
             if model is not None and "[your model]" in prompt:
@@ -200,11 +200,14 @@ class Jailbreak:
         # Todo: define the prompt evaluation scope
         jailbreak_prompts = self.prompts
         results = []
+        print("Model: ", model)
         for prompt in data.generate_queries():
-            print("prompt:", prompt)
+            # print("prompt:", prompt)
             for jailbreak_prompt in jailbreak_prompts:
-                query_prompt = self.get_combined_prompts(prompt, jailbreak_prompt)
+                query_prompt = self.get_combined_prompts(prompt, jailbreak_prompt, model.model)
                 if query_prompt != -1:
+                    print("Query Prompt: ", query_prompt)
+                    print("Result: ", model.query(query_prompt))
                     results.append(model.query(query_prompt))
         return results
     

@@ -49,4 +49,4 @@ parameters:
   #     # - no-ignore
   #     # - explain
   #     # - eaten
-program: extract_prompt.py
+program: scripts/extract_prompt.py

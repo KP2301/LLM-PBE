@@ -75,9 +75,23 @@ def extract_general_prompts(english_only=True):
     root_path = os.path.join(data_dir, f"{fld}")
     
     def extract(content: str):
-        # Using regular expression to extract content between specific markers
+        # Try primary pattern
         matches = re.findall(r'# Prompt\s+```(.*?)```\s+## Conversation', content, re.DOTALL)
-        return matches[0]
+        if matches:
+            return matches[0].strip()
+        
+        # Try alternative pattern without ## Conversation
+        matches = re.findall(r'# Prompt\s+```(.*?)```', content, re.DOTALL)
+        if matches:
+            return matches[0].strip()
+        
+        # Try without # Prompt header
+        matches = re.findall(r'```(?:markdown|text)?\n(.*?)```', content, re.DOTALL)
+        if matches:
+            return matches[0].strip()
+        
+        # No match found
+        return None
     
     prompts = []
     NE_prompts = []
@@ -93,37 +107,28 @@ def extract_general_prompts(english_only=True):
         print(f"md_filepaths ({len(md_filepaths)}): {md_filepaths[0]}")
         
         file2prompts = read_md_files(root_path, extract, files=[f for f in md_filepaths if os.path.exists(os.path.join(root_path, f))])
-        # for k, v in file2prompts.items():
-        #     print(k, '\n', v)
-        #     break
+        
         _prompts = [v for k, v in file2prompts.items()]
-        # if english_only:
-        _no_en_prompts = [p for p in prompts if not is_mostly_english(p)]
+        _no_en_prompts = [p for p in _prompts if not is_mostly_english(p)]  # Fixed: was using 'prompts' instead of '_prompts'
         _prompts = [p for p in _prompts if is_mostly_english(p)]
-        print(f"{cat}: {len(_prompts)} prompts")
+        print(f"{cat}: {len(_prompts)} prompts (skipped {len(md_filepaths) - len(file2prompts)} files)")
         
         prompts.extend(_prompts)
-        NE_prompts.append(_no_en_prompts)
+        NE_prompts.extend(_no_en_prompts)  # Fixed: was using append instead of extend
         
         cat_fld = os.path.join(data_dir, "blackfriday")
         if not os.path.exists(cat_fld):
             os.makedirs(cat_fld)
         fpath = os.path.join(cat_fld, f"{cat}.pth")
         torch.save(_prompts, fpath)
-        print(f"\n>> Output {len(_prompts)} prompts to: {fpath}")
+        print(f">> Output {len(_prompts)} prompts to: {fpath}")
         
         cat_fld = os.path.join(data_dir, "NE_blackfriday")
         if not os.path.exists(cat_fld):
             os.makedirs(cat_fld)
         fpath = os.path.join(cat_fld, f"{cat}.pth")
         torch.save(_no_en_prompts, fpath)
-        print(f"\n>> Output NE {len(_no_en_prompts)} prompts to: {fpath}")
-    
-    # file2prompts = read_md_files(root_path, extract, files=[os.path.join("gpts", f"{f}.md") for f in md_filepaths])
-    # for k, v in file2prompts.items():
-    #     print(k, '\n', v)
-    #     break
-    # prompts = [v for k, v in file2prompts.items()]
+        print(f">> Output NE {len(_no_en_prompts)} prompts to: {fpath}")
     
     print()
     fpath = os.path.join(data_dir, "BlackFriday-GPTs-Prompts.pth")
@@ -197,13 +202,13 @@ def merge_and_deduplicate_prompts(files, out_file):
     print(f">> Save merged GPTs prompts to {fname}")
 
 if __name__ == "__main__":
-    # extract_leaked_GPTs()  # start with "You are a ChatGPT."
+    extract_leaked_GPTs()  # start with "You are a ChatGPT."
     # extract_leaked_GPTs_no_pattern()
-    # extract_general_prompts()
+    extract_general_prompts()
     
-    # merge_and_deduplicate_prompts(files=['GPTs.pth', 'Leaked-GPTs.pth'], out_file='merged_GPTs.pth')
+    merge_and_deduplicate_prompts(files=['GPTs.pth', 'Leaked-GPTs.pth'], out_file='merged_GPTs.pth')
     
-    # merge_and_deduplicate_prompts(files=['BlackFriday-GPTs-Prompts.pth'], out_file='dedup_BlackFriday-GPTs-Prompts.pth')
+    merge_and_deduplicate_prompts(files=['BlackFriday-GPTs-Prompts.pth'], out_file='dedup_BlackFriday-GPTs-Prompts.pth')
     
     categories = ['Academic', 'Business', 'Creative', 'Game', 'Job-Hunting', 'Marketing', 'Productivity-&-life-style', 'Programming']
     for cat in categories:
